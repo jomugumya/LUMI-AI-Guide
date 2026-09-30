@@ -127,7 +127,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--datadir", default="data-formats-tabular")
     parser.add_argument("-n", "--num_workers", type=int, default=0)
-    parser.add_argument("-N", "--num_samples", type=int, default=100000)
+    parser.add_argument("-N", "--num_samples", type=int, default=10000)
     parser.add_argument("-ff", "--file_format", choices=["parquet", "csv", "hdf5"], required=True)
     args = parser.parse_args()
 

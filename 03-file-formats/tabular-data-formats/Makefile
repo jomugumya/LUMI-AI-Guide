@@ -17,18 +17,20 @@ convert:
 
 bench-scan:
 	$(MODULES) && srun --account=$(ACCOUNT) --partition=small --time=00:10:00 --cpus-per-task=4 \
-	  singularity exec $(SIF) bash -c "source venv-tables/bin/activate && python3 bench_tabular_scan.py --datadir data-formats-tabular"
+	  singularity exec $(SIF) bash -c "source venv-tables/bin/activate && python3 bench_tabular_scan.py --datadir data-formats-tabular" | tee -a bench-scan-results.log
 
 bench-dataloader:
 	for fmt in parquet csv hdf5; do \
 	  $(MODULES) && srun --account=$(ACCOUNT) --partition=small --time=00:10:00 --cpus-per-task=4 \
-	    singularity exec $(SIF) bash -c "source venv-tables/bin/activate && python3 bench_tabular_dataloader.py -ff $$fmt -N 10000"; \
+	    singularity exec $(SIF) bash -c "source venv-tables/bin/activate && python3 bench_tabular_dataloader.py -ff $$fmt -N 10000"; | tee -a bench-dataloader-results.log \
 	done
- ============================================================
+
+post:
+	python3 post_process_tabular.py
+
+# ============================================================
 # PART 2 - Going deeper: does Parquet's internal row group
-# size matter for random access? (Parquet-only follow-up to
-# the bench-dataloader result above; CSV and HDF5 have no
-# equivalent tunable setting
+# size matter for random access?
 # ============================================================
 
 convert-rowgroups:
