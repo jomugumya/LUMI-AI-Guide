@@ -22,7 +22,7 @@ bench-scan:
 bench-dataloader:
 	for fmt in parquet csv hdf5; do \
 	  $(MODULES) && srun --account=$(ACCOUNT) --partition=small --time=00:10:00 --cpus-per-task=4 \
-	    singularity exec $(SIF) bash -c "source venv-tables/bin/activate && python3 bench_tabular_dataloader.py -ff $$fmt -N 10000"; | tee -a bench-dataloader-results.log \
+	    singularity exec $(SIF) bash -c "source venv-tables/bin/activate && python3 bench_tabular_dataloader.py -ff $$fmt -N 10000" | tee -a bench-dataloader-results.log; \
 	done
 
 post:
