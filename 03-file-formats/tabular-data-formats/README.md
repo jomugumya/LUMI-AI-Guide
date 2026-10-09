@@ -4,6 +4,12 @@ Every training job on an HPC system computes on the GPU while it retrieves the d
 
 This chapter compares three formats, Parquet, CSV and HDF5, on two different ways of reading the same data.
 
+## TLDR
+
+- Scanning, filtering and file size: Parquet was the fastest and the smallest of the three formats.
+- Random row batches: CSV and Parquet were both fast, because the benchmark loads the whole table into memory first. HDF5 was roughly 300x slower, because it queries the file for every batch.
+- Parquet is not always the best choice: see [Decision framework](#Decision-framework), and note that results depend on your table's size and on how you read it.
+
 ## What is being tested
 
 1. **Scanning and filtering**: reading a full table, only specific columns, and reading only rows matching a condition. This is the pattern behind data exploration, feature engineering, and analytical queries.
@@ -56,7 +62,7 @@ The three formats split their cost between "load" and "dataloader" differently:
 
 - **CSV** reads the entire file into memory during load time, so the dataloader step only looks up rows that are already in memory. All of the cost is paid upfront, which is why CSV has the slowest load time and the fastest dataloader time.
 - **HDF5** only opens the file during the load, with each random batch triggering a new file query. As a result, the data acess cost is paid repeatedly and this is evident with a higher dataloader time.
-- **Parquet** memory-maps the file during load, connecting to the file without reading the data. Each random batch then fetches only the bytes it needs, so the cost is shared between the two steps.
+- **Parquet** memory-maps the file during load, then decodes it into an in-memory table. Each random batch then slices rows out of that table, so, like CSV, the dataloader step does no file reads.
 
 ## Decision framework
 
@@ -65,6 +71,11 @@ Choose a format based on how you plan to read your data:
 - If you mostly scan full tables, read specific columns, or filter rows (data exploration, feature engineering): use Parquet. It was fastest roughly 13x faster than CSV for a full scan, and 55x-70x faster for two columns reads, compared with HDF5 AND CSV, respectively.
 - If you mostly grab small, randomly-ordered batches of rows (feeding a model during training): use CSV or Parquet, avoid HDF5. CSV in this experiment was only fast because the whole table sits in memory.
 - If your table is much larger or differently shaped than ~2.96 million row amd 19-column table tested here, treat these numbers as directional, and run the benchmarks on your own data. (See [BENCHMARKS.md](BENCHMARKS.md)).
+
+Parquet was the best option for scanning, filtering and file size, but not for everything:
+- Random row access: Parquet is optimized for column reads. Fetching whole rows from a file typically rquires reading and decoding data from all relevant columns, which can make random row access less efficient than column focussed queries.
+- Not human-readable: You can't open a Parquet file in a text editor, and adding or changing rows means rewriting the file or writing new files.
+- Needs a library: such as `pyarrow`, whereas almost any tool can read CSV.
 
 ## Parquet's row Group size
 
